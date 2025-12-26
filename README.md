@@ -165,7 +165,7 @@ saas-platform/
 ### Start the Entire System
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
 This will:
@@ -327,8 +327,8 @@ The frontend is being actively integrated and will include:
 
 ## Screenshots
 
-[view database-erd]()
-[view system-architecture]()
+[view database-erd](docs/images/database-erd.png)
+[view system-architecture](docs/images/system-architecture.png)
 
 ---
 
