@@ -50,12 +50,12 @@ services:
 
  
   frontend:
-    image: node:18-alpine
+    build: ./frontend
     container_name: frontend
-    working_dir: /app
-    command: sh -c "echo 'Frontend placeholder running' && sleep infinity"
     ports:
       - "3000:3000"  
+    environment:
+       VITE_API_URL: http://backend:5000/api
     depends_on:
       backend:
         condition: service_healthy
