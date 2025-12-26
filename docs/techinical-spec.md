@@ -1,140 +1,196 @@
+
 # Technical Specification
 
-Multi-Tenant SaaS Platform – Project & Task Management
+**Multi-Tenant SaaS Platform – Project & Task Management**
 
 ---
 
 ## 1. Purpose
 
-This document defines the **technical design, project structure, setup process, and implementation details** of the Multi-Tenant SaaS Platform. It serves as a reference for developers, reviewers, and future maintainers to understand how the system is built and how its components interact.
+This document provides a **technical specification** for the Multi-Tenant SaaS Platform. It describes the system structure, module responsibilities, environment configuration, development workflow, and operational behavior. The goal is to ensure that the system can be easily understood, deployed, extended, and maintained by developers.
 
 ---
 
-## 2. Technology Stack
+## 2. System Overview
 
-### Backend
+The platform is a **REST-based multi-tenant SaaS backend** designed to support multiple organizations with strict data isolation. Each tenant manages its own users, projects, and tasks while sharing a common infrastructure.
 
-* **Runtime:** Node.js (v18+)
-* **Framework:** Express.js
-* **Database:** PostgreSQL 15
-* **Authentication:** JSON Web Tokens (JWT)
-* **Password Hashing:** bcrypt
-* **Validation:** Custom middleware (extensible to Joi/express-validator)
+Key technical characteristics:
 
-### Frontend (Planned)
-
-* React.js
-* Context / Redux for state management
-* Role-based UI rendering
-* Protected routes
-
-### DevOps
-
-* Docker
-* Docker Compose
+* Stateless backend API
+* JWT-based authentication
+* Role-based access control
+* Tenant-aware data access
+* Containerized deployment
 
 ---
 
-## 3. Architecture Overview
+## 3. Project Structure
 
-### Multi-Tenancy Strategy
-
-* **Shared database, shared schema**
-* Tenant isolation enforced using `tenant_id` on all tenant-bound tables
-* Super Admin users have `tenant_id = NULL`
-* Tenant context is derived exclusively from JWT tokens
-
-### Isolation Rules
-
-* Client never sends `tenant_id`
-* Backend always injects `tenant_id` from authentication middleware
-* Tasks derive tenant ownership from the associated project
-* Super Admin bypasses tenant filtering where allowed
-
----
-
-## 4. Backend Project Structure
+### 3.1 Repository Structure
 
 ```
-backend/
-├── src/
-│   ├── controllers/
-│   │   ├── authCtrl.js
-│   │   ├── tenantCtrl.js
-│   │   ├── userCtrl.js
-│   │   ├── projectCtrl.js
-│   │   └── taskCtrl.js
-│   │
-│   ├── routes/
-│   │   ├── authRoutes.js
-│   │   ├── tenantRoutes.js
-│   │   ├── userRoutes.js
-│   │   ├── projectRoutes.js
-│   │   └── taskRoutes.js
-│   │
-│   ├── middleware/
-│   │   ├── authMiddleware.js
-│   │   ├── roleMiddleware.js
-│   │   └── tenantMiddleware.js
-│   │
-│   ├── utils/
-│   │   ├── jwt.js
-│   │   ├── password.js
-│   │   └── auditLogger.js
-│   │
-│   ├── config/
-│   │   └── db.js
-│   │
-│   └── app.js
+saas-platform/
 │
-├── migrations/
-│   ├── 001_create_tenants.sql
-│   ├── 002_create_users.sql
-│   ├── 003_create_projects.sql
-│   ├── 004_create_tasks.sql
-│   └── 005_create_audit_logs.sql
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   │   ├── authController.js
+│   │   │   ├── tenantController.js
+│   │   │   ├── userController.js
+│   │   │   ├── projectController.js
+│   │   │   └── taskController.js
+│   │   │
+│   │   ├── middleware/
+│   │   │   ├── authMiddleware.js
+│   │   │   ├── roleMiddleware.js
+│   │   │   ├── tenantMiddleware.js
+│   │   │   └── errorHandler.js
+│   │   │
+│   │   ├── routes/
+│   │   │   ├── authRoutes.js
+│   │   │   ├── tenantRoutes.js
+│   │   │   ├── userRoutes.js
+│   │   │   ├── projectRoutes.js
+│   │   │   └── taskRoutes.js
+│   │   │
+│   │   ├── config/
+│   │   │   ├── db.js
+│   │   │   └── env.js
+│   │   │
+│   │   ├── utils/
+│   │   │   ├── jwt.js
+│   │   │   ├── password.js
+│   │   │   └── auditLogger.js
+│   │   │
+│   │   └── server.js
+│   │
+│   ├── migrations/
+│   │   ├── 001_create_tenants.sql
+│   │   ├── 002_create_users.sql
+│   │   ├── 003_create_projects.sql
+│   │   ├── 004_create_tasks.sql
+│   │   └── 005_create_audit_logs.sql
+│   │
+│   ├── seeds/
+│   │   └── seed_data.sql
+│   │
+│   ├── Dockerfile
+│   └── package.json
 │
-├── seeds/
-│   └── seed_data.sql
+├── frontend/
+│   
 │
-├── Dockerfile
-├── server.js
-└── package.json
+├── docs/
+│   ├── research.md
+│   ├── architecture.md
+│   ├── API.md
+│   ├── PRD.md
+│   └── technical-spec.md
+│
+├── docker-compose.yml
+├── submission.json
+└── README.md
 ```
+
+---
+
+## 4. Backend Architecture
+
+### 4.1 Controller Layer
+
+**Responsibility**
+
+* Handles HTTP requests
+* Validates inputs
+* Applies business logic
+* Returns standardized responses
+
+Controllers do not directly handle authentication or authorization logic; these concerns are delegated to middleware.
+
+---
+
+### 4.2 Middleware Layer
+
+Middleware executes before controller logic and enforces system rules.
+
+**Key Middleware Components**
+
+* **Authentication Middleware**
+
+  * Verifies JWT signature and expiry
+  * Extracts `userId`, `tenantId`, and `role`
+
+* **Tenant Isolation Middleware**
+
+  * Injects tenant context into request
+  * Prevents cross-tenant access
+
+* **Role Authorization Middleware**
+
+  * Validates user permissions per endpoint
+  * Enforces role-based access control
+
+* **Error Handling Middleware**
+
+  * Centralized error formatting
+  * Consistent HTTP status codes
+
+---
+
+### 4.3 Route Layer
+
+Routes define:
+
+* Endpoint paths
+* HTTP methods
+* Required middleware
+* Associated controllers
+
+Each module has its own route file to maintain separation of concerns.
 
 ---
 
 ## 5. Database Design
 
-### Core Tables
+### 5.1 Database Type
 
-* tenants
-* users
-* projects
-* tasks
-* audit_logs
+* PostgreSQL 15
+* Relational schema
+* UUID primary keys
 
-### Key Constraints
+---
 
-* `UNIQUE (tenant_id, email)` on users
-* Foreign keys with CASCADE delete where appropriate
-* Indexed `tenant_id` columns for performance
-* ENUM types used for role, status, priority, subscription plans
+### 5.2 Core Tables
 
-### Tenant Ownership
+| Table Name | Purpose                                         |
+| ---------- | ----------------------------------------------- |
+| tenants    | Stores tenant metadata and subscription details |
+| users      | Stores user accounts and roles                  |
+| projects   | Stores tenant-specific projects                 |
+| tasks      | Stores tasks associated with projects           |
+| audit_logs | Records critical system actions                 |
 
-| Table      | Tenant Source                          |
-| ---------- | -------------------------------------- |
-| users      | users.tenant_id                        |
-| projects   | projects.tenant_id                     |
-| tasks      | tasks.tenant_id (derived from project) |
-| audit_logs | audit_logs.tenant_id                   |
+---
+
+### 5.3 Tenant Isolation Rules
+
+* All tenant-bound tables include `tenant_id`
+* Queries are always filtered using tenant context
+* `tenant_id` is derived from JWT, never from request body
+* Super Admin users are handled as a special case
 
 ---
 
 ## 6. Authentication & Authorization
 
-### JWT Payload
+### 6.1 JWT Authentication
+
+* Stateless JWT tokens
+* Token expiry: 24 hours
+* Signed using a secret key
+
+**JWT Payload Structure**
 
 ```json
 {
@@ -144,42 +200,57 @@ backend/
 }
 ```
 
-### Authentication Flow
+---
 
-1. User logs in
-2. JWT issued with userId, tenantId, role
-3. Token validated on each request
-4. Tenant context injected into request
+### 6.2 Role-Based Access Control
 
-### Authorization Rules
+| Role         | Permissions                                 |
+| ------------ | ------------------------------------------- |
+| super_admin  | Full system access                          |
+| tenant_admin | Manage users, projects, tasks within tenant |
+| user         | Limited access to assigned resources        |
 
-* Super Admin: Access to all tenants
-* Tenant Admin: Full control within own tenant
-* User: Limited access within own tenant
+Authorization rules are enforced before controller execution.
 
 ---
 
-## 7. Subscription Management
+## 7. Subscription Enforcement
 
-Each tenant has a subscription plan:
+Subscription limits are enforced at the API layer.
 
-| Plan       | Max Users | Max Projects |
-| ---------- | --------- | ------------ |
-| Free       | 5         | 3            |
-| Pro        | 25        | 15           |
-| Enterprise | 100       | 50           |
+**Enforcement Flow**
 
-Enforcement:
+1. Fetch tenant subscription limits
+2. Count existing resources
+3. Compare with allowed maximum
+4. Reject creation if limit exceeded
 
-* Checked before creating users or projects
-* Rejected with HTTP 403 when limit exceeded
+This ensures business constraints are consistently applied.
 
 ---
 
-## 8. API Design Principles
+## 8. Audit Logging
 
-* RESTful endpoints
-* Consistent response format:
+Audit logging captures all critical actions.
+
+**Logged Fields**
+
+* tenant_id
+* user_id
+* action
+* entity_type
+* entity_id
+* timestamp
+
+Logs are immutable and used for security auditing and debugging.
+
+---
+
+## 9. API Response Standards
+
+All API responses follow a consistent format.
+
+**Success Response**
 
 ```json
 {
@@ -189,59 +260,22 @@ Enforcement:
 }
 ```
 
-* Proper HTTP status codes
-* Partial updates supported
-* Pagination implemented for list endpoints
+**Error Response**
 
----
-
-## 9. Audit Logging
-
-All critical actions are logged:
-
-* CREATE / UPDATE / DELETE for users, projects, tasks
-* Tenant updates
-* Authentication events (optional)
-
-Stored fields:
-
-* tenant_id
-* user_id
-* action
-* entity_type
-* entity_id
-* ip_address
-* timestamp
-
----
-
-## 10. Docker Configuration
-
-### Services
-
-* database (PostgreSQL)
-* backend (Express API)
-* frontend (placeholder)
-
-### Startup Behavior
-
-* Migrations run automatically
-* Seed data loaded automatically
-* Health check enabled
-
-### Health Check Endpoint
-
-```
-GET /api/health
+```json
+{
+  "success": false,
+  "message": "Error description"
+}
 ```
 
-Returns database and application readiness.
+This consistency simplifies frontend integration.
 
 ---
 
-## 11. Environment Variables
+## 10. Environment Configuration
 
-### Required Variables
+### 10.1 Required Environment Variables
 
 ```
 DB_HOST
@@ -259,33 +293,74 @@ NODE_ENV
 FRONTEND_URL
 ```
 
-All variables are available via `.env` or `docker-compose.yml`.
+All configuration values are injected via environment variables.
 
 ---
 
-## 12. Error Handling Strategy
+## 11. Docker & Deployment
 
-* Centralized error handling
-* Meaningful error messages
-* Authorization failures return 403
-* Validation failures return 400
-* Resource not found returns 404
+### 11.1 Services
 
----
-
-## 13. Future Enhancements
-
-* Frontend implementation
-* Swagger / OpenAPI documentation
-* Rate limiting
-* Refresh tokens
-* Email notifications
-* Soft deletes
+| Service  | Description          |
+| -------- | -------------------- |
+| database | PostgreSQL database  |
+| backend  | Express.js API       |
+| frontend | UI service (planned) |
 
 ---
 
-## 14. Conclusion
+### 11.2 Startup Behavior
 
-This technical specification defines a **secure, scalable, and maintainable multi-tenant SaaS backend** with clear separation of concerns, strict tenant isolation, and production-ready practices. The system is designed to support growth, additional features, and frontend integration without architectural changes.
+On `docker-compose up -d`:
+
+1. Database container starts
+2. Backend waits for database readiness
+3. Migrations execute automatically
+4. Seed data is loaded
+5. Backend API becomes available
 
 ---
+
+## 12. Health Check
+
+**Endpoint**
+
+```
+GET /api/health
+```
+
+**Purpose**
+
+* Confirms API availability
+* Confirms database connectivity
+* Signals readiness to Docker and external systems
+
+---
+
+## 13. Development Workflow
+
+1. Clone repository
+2. Configure environment variables
+3. Run `docker-compose up -d`
+4. Access backend at `http://localhost:5000`
+5. Use API documentation for testing
+
+---
+
+## 14. Extensibility
+
+The system is designed for future growth:
+
+* Stateless backend allows horizontal scaling
+* Additional services can be introduced without refactoring
+* Frontend integration is decoupled
+* Database schema supports expansion
+
+---
+
+## 15. Conclusion
+
+This technical specification defines a **clear, modular, and scalable architecture** for a multi-tenant SaaS platform. The system enforces strong security guarantees, supports real-world SaaS constraints, and provides a stable foundation for future development and deployment.
+
+---
+

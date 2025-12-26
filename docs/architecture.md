@@ -1,21 +1,14 @@
-# System Architecture Document
-
-Multi-Tenant SaaS Platform – Project & Task ManagementBelow is a **complete, professional `docs/architecture.md`** written cleanly, technically, and **as your own system**.
-No emojis, no external references, no branding.
-
-You can copy this directly into `docs/architecture.md`.
-
----
 
 # System Architecture Document
 
-Multi-Tenant SaaS Platform – Project & Task Management
+**Multi-Tenant SaaS Platform – Project & Task Management**
 
 ---
 
 ## 1. Overview
 
-This document describes the **system architecture, component interactions, and data flow** of the Multi-Tenant SaaS Platform. The architecture is designed to ensure **strict tenant isolation, role-based access control, scalability, and maintainability**, while remaining simple to deploy and operate using containerization.
+This document describes the **system architecture, component responsibilities, and data flow** of the Multi-Tenant SaaS Platform.
+The architecture is designed to ensure **strict tenant isolation, role-based access control, scalability, security, and maintainability**, while remaining simple to deploy and operate using containerization.
 
 ---
 
@@ -23,7 +16,7 @@ This document describes the **system architecture, component interactions, and d
 
 The system follows a **three-tier architecture**:
 
-1. **Client Layer (Frontend – Planned)**
+1. **Client Layer (Frontend)**
 2. **Application Layer (Backend API)**
 3. **Data Layer (PostgreSQL Database)**
 
@@ -35,69 +28,72 @@ Each layer is independently deployable and communicates through well-defined int
 
 ### 3.1 Client Layer (Frontend)
 
-**Responsibilities:**
+**Responsibilities**
 
 * User authentication (login, logout)
 * Role-based UI rendering
 * Project and task management interfaces
-* API consumption via HTTP requests
+* API consumption via HTTP
 * Token storage and session handling
 
-**Key Characteristics:**
+**Key Characteristics**
 
-* Stateless UI
-* Communicates with backend via REST APIs
-* JWT stored on client side
-* Authorization header attached to all requests
+* Stateless client
+* Communicates with backend using REST APIs
+* JWT stored client-side
+* Authorization header attached to every request
 
-> Note: Frontend implementation is planned and intentionally decoupled from backend design.
+The frontend is intentionally **decoupled** from backend implementation details and communicates only through documented APIs.
 
 ---
 
 ### 3.2 Application Layer (Backend API)
 
-**Technology:** Node.js + Express.js
+**Technology Stack**
 
-**Responsibilities:**
+* Node.js
+* Express.js
+
+**Responsibilities**
 
 * Authentication and authorization
 * Tenant isolation enforcement
-* Business logic processing
-* Subscription limit enforcement
+* Business logic execution
+* Subscription limit validation
 * Audit logging
 * Database access
 
 #### Core Modules
 
-* Auth Module
+* Authentication Module
 * Tenant Management Module
 * User Management Module
 * Project Management Module
 * Task Management Module
 
-Each module is implemented using:
+Each module is structured using:
 
-* Controller (business logic)
-* Route definitions
-* Middleware (auth, tenant isolation, RBAC)
+* Controllers (business logic)
+* Routes (API definitions)
+* Middleware (authentication, authorization, tenant isolation)
 
 ---
 
 ### 3.3 Data Layer (PostgreSQL)
 
-**Responsibilities:**
+**Responsibilities**
 
 * Persistent data storage
 * Transaction management
 * Referential integrity
-* Enforcing schema-level constraints
+* Schema-level constraints
 
-**Key Characteristics:**
+**Key Characteristics**
 
 * Shared database, shared schema
 * Tenant data isolated using `tenant_id`
-* Foreign key relationships with CASCADE rules
-* Indexed tenant columns for performance
+* Foreign key constraints with cascade rules
+* Indexed tenant-related columns for performance
 
 ---
 
@@ -109,30 +105,30 @@ Each module is implemented using:
 
   * `tenant_id` (UUID)
   * `subdomain` (human-readable identifier)
-* Tenant context is derived from JWT token
-* Client never supplies tenant identifiers directly
+* Tenant context is derived exclusively from the JWT
+* Client requests never provide or control tenant identifiers
 
 ---
 
 ### 4.2 Tenant Isolation Strategy
 
-| Entity     | Isolation Method                       |
+| Entity     | Isolation Mechanism                    |
 | ---------- | -------------------------------------- |
 | Users      | users.tenant_id                        |
 | Projects   | projects.tenant_id                     |
 | Tasks      | tasks.tenant_id (derived from project) |
 | Audit Logs | audit_logs.tenant_id                   |
 
-All database queries automatically filter by `tenant_id` unless the requester is a super admin.
+All tenant-scoped database queries automatically apply tenant filtering unless the requester is a super admin.
 
 ---
 
-### 4.3 Super Admin Exception
+### 4.3 Super Admin Access Model
 
 * Super Admin users have `tenant_id = NULL`
-* They can access data across tenants
+* They are allowed cross-tenant visibility
 * Authorization middleware explicitly checks this role
-* No tenant filtering applied for super admin operations
+* Tenant filtering is bypassed only for approved super admin operations
 
 ---
 
@@ -141,23 +137,23 @@ All database queries automatically filter by `tenant_id` unless the requester is
 ### 5.1 Login Flow
 
 1. User submits credentials with tenant subdomain
-2. Backend verifies tenant status
-3. User credentials validated using bcrypt
-4. JWT token issued containing:
+2. Backend verifies tenant existence and status
+3. Password is validated using bcrypt
+4. JWT is issued containing:
 
    * userId
    * tenantId
    * role
-5. Token returned to client
+5. Token is returned to the client
 
 ---
 
 ### 5.2 Request Authorization Flow
 
-1. Client sends request with `Authorization: Bearer <token>`
-2. Auth middleware verifies token signature and expiry
+1. Client sends request with `Authorization: Bearer <JWT>`
+2. Authentication middleware verifies token validity
 3. Tenant middleware extracts tenant context
-4. Role middleware validates permissions
+4. Role-based middleware validates permissions
 5. Controller executes business logic
 
 ---
@@ -168,7 +164,9 @@ All database queries automatically filter by `tenant_id` unless the requester is
 Client
   ↓ HTTP Request (JWT)
 Backend API
-  ↓ Middleware (Auth, Tenant, Role)
+  ↓ Authentication Middleware
+  ↓ Tenant Isolation Middleware
+  ↓ Role Authorization Middleware
 Controller
   ↓ SQL Query
 PostgreSQL
@@ -186,9 +184,9 @@ Client
 
 * Normalized relational schema
 * UUIDs as primary keys
-* ENUM types for controlled fields
-* Foreign keys for integrity
-* CASCADE deletes where applicable
+* ENUMs for controlled values
+* Foreign keys for data integrity
+* Cascade deletes where appropriate
 
 ---
 
@@ -200,29 +198,29 @@ Client
 * tasks
 * audit_logs
 
-Each table follows strict ownership and relationship rules to ensure tenant safety.
+Each table enforces ownership and relationship constraints to guarantee tenant isolation.
 
 ---
 
 ## 8. Subscription Enforcement Architecture
 
-Subscription limits are enforced at the application layer:
+Subscription limits are enforced at the **application layer**:
 
-1. Query tenant limits (`max_users`, `max_projects`)
-2. Count existing resources
-3. Reject creation if limit exceeded
-4. Return appropriate HTTP 403 response
+1. Tenant subscription limits are retrieved
+2. Existing resource counts are calculated
+3. Creation is rejected if limits are exceeded
+4. HTTP 403 response is returned with a clear message
 
-This ensures business rules are applied consistently.
+This ensures consistent business rule enforcement.
 
 ---
 
 ## 9. Audit Logging Architecture
 
-Audit logging is centralized:
+Audit logging is centralized and automatic:
 
-* Each critical action triggers an audit log entry
-* Stored fields:
+* Triggered for all critical actions
+* Stored attributes include:
 
   * tenant_id
   * user_id
@@ -230,16 +228,16 @@ Audit logging is centralized:
   * entity_type
   * entity_id
   * timestamp
-* Logs are immutable and not exposed to modification APIs
+* Logs are immutable and not modifiable via APIs
 
 ---
 
 ## 10. Error Handling Architecture
 
-* Centralized error responses
-* Consistent JSON error format
-* Meaningful HTTP status codes
-* Authorization and validation failures handled early
+* Centralized error handling strategy
+* Consistent JSON error responses
+* Appropriate HTTP status codes
+* Authorization and validation failures handled early in request lifecycle
 
 ---
 
@@ -247,30 +245,30 @@ Audit logging is centralized:
 
 ### 11.1 Containerized Services
 
-| Service  | Responsibility       |
-| -------- | -------------------- |
-| database | PostgreSQL storage   |
-| backend  | API server           |
-| frontend | UI service (planned) |
+| Service  | Responsibility     |
+| -------- | ------------------ |
+| database | PostgreSQL storage |
+| backend  | REST API server    |
+| frontend | Client application |
 
 ---
 
 ### 11.2 Inter-Service Communication
 
-* Services communicate via Docker service names
-* Backend connects to database using `database:5432`
-* Frontend consumes API via `backend:5000`
+* Services communicate using Docker networking
+* Backend connects to database via `database:5432`
+* Frontend communicates with backend via exposed API port
 
 ---
 
-### 11.3 Health Check Architecture
+### 11.3 Health Check Strategy
 
 * Backend exposes `/api/health`
-* Health check verifies:
+* Health check validates:
 
   * API availability
   * Database connectivity
-* Docker Compose waits for healthy services before startup completion
+* Docker Compose waits for healthy services before dependency startup
 
 ---
 
@@ -278,11 +276,11 @@ Audit logging is centralized:
 
 The architecture supports future growth:
 
-* Horizontal scaling of backend containers
+* Horizontal scaling of backend services
 * Stateless API design
-* Read replicas for database (future)
+* Database read replicas (future enhancement)
 * Microservice extraction if required
-* Caching and background jobs can be added without refactoring
+* Caching and background workers can be introduced without redesign
 
 ---
 
@@ -292,313 +290,13 @@ The architecture supports future growth:
 * Strict tenant isolation
 * Role-based authorization
 * Secure password hashing
-* Audit trail for all critical operations
+* Audit trail for all sensitive operations
 
 ---
 
 ## 14. Conclusion
 
-This architecture provides a **robust foundation for a production-ready multi-tenant SaaS system**. It balances simplicity and scalability while ensuring security, data isolation, and maintainability. The modular design allows future enhancements without architectural changes.
+This architecture provides a **robust and scalable foundation for a production-ready multi-tenant SaaS platform**.
+It balances simplicity with extensibility while enforcing strong security and data isolation guarantees.
 
 ---
-
-If you want next, I can generate:
-
-* `PRD.md`
-* Improve `API.md` with examples
-* Final `README.md` polish
-
-Just tell me what to do next.
-
-
----
-
-## 1. Overview
-
-This document describes the **system architecture, component interactions, and data flow** of the Multi-Tenant SaaS Platform. The architecture is designed to ensure **strict tenant isolation, role-based access control, scalability, and maintainability**, while remaining simple to deploy and operate using containerization.
-
----
-
-## 2. High-Level Architecture
-
-The system follows a **three-tier architecture**:
-
-1. **Client Layer (Frontend – Planned)**
-2. **Application Layer (Backend API)**
-3. **Data Layer (PostgreSQL Database)**
-
-Each layer is independently deployable and communicates through well-defined interfaces.
-
----
-
-## 3. Architecture Components
-
-### 3.1 Client Layer (Frontend)
-
-**Responsibilities:**
-
-* User authentication (login, logout)
-* Role-based UI rendering
-* Project and task management interfaces
-* API consumption via HTTP requests
-* Token storage and session handling
-
-**Key Characteristics:**
-
-* Stateless UI
-* Communicates with backend via REST APIs
-* JWT stored on client side
-* Authorization header attached to all requests
-
-> Note: Frontend implementation is planned and intentionally decoupled from backend design.
-
----
-
-### 3.2 Application Layer (Backend API)
-
-**Technology:** Node.js + Express.js
-
-**Responsibilities:**
-
-* Authentication and authorization
-* Tenant isolation enforcement
-* Business logic processing
-* Subscription limit enforcement
-* Audit logging
-* Database access
-
-#### Core Modules
-
-* Auth Module
-* Tenant Management Module
-* User Management Module
-* Project Management Module
-* Task Management Module
-
-Each module is implemented using:
-
-* Controller (business logic)
-* Route definitions
-* Middleware (auth, tenant isolation, RBAC)
-
----
-
-### 3.3 Data Layer (PostgreSQL)
-
-**Responsibilities:**
-
-* Persistent data storage
-* Transaction management
-* Referential integrity
-* Enforcing schema-level constraints
-
-**Key Characteristics:**
-
-* Shared database, shared schema
-* Tenant data isolated using `tenant_id`
-* Foreign key relationships with CASCADE rules
-* Indexed tenant columns for performance
-
----
-
-## 4. Multi-Tenancy Design
-
-### 4.1 Tenant Identification
-
-* Each tenant is uniquely identified by:
-
-  * `tenant_id` (UUID)
-  * `subdomain` (human-readable identifier)
-* Tenant context is derived from JWT token
-* Client never supplies tenant identifiers directly
-
----
-
-### 4.2 Tenant Isolation Strategy
-
-| Entity     | Isolation Method                       |
-| ---------- | -------------------------------------- |
-| Users      | users.tenant_id                        |
-| Projects   | projects.tenant_id                     |
-| Tasks      | tasks.tenant_id (derived from project) |
-| Audit Logs | audit_logs.tenant_id                   |
-
-All database queries automatically filter by `tenant_id` unless the requester is a super admin.
-
----
-
-### 4.3 Super Admin Exception
-
-* Super Admin users have `tenant_id = NULL`
-* They can access data across tenants
-* Authorization middleware explicitly checks this role
-* No tenant filtering applied for super admin operations
-
----
-
-## 5. Authentication & Authorization Flow
-
-### 5.1 Login Flow
-
-1. User submits credentials with tenant subdomain
-2. Backend verifies tenant status
-3. User credentials validated using bcrypt
-4. JWT token issued containing:
-
-   * userId
-   * tenantId
-   * role
-5. Token returned to client
-
----
-
-### 5.2 Request Authorization Flow
-
-1. Client sends request with `Authorization: Bearer <token>`
-2. Auth middleware verifies token signature and expiry
-3. Tenant middleware extracts tenant context
-4. Role middleware validates permissions
-5. Controller executes business logic
-
----
-
-## 6. API Communication Flow
-
-```
-Client
-  ↓ HTTP Request (JWT)
-Backend API
-  ↓ Middleware (Auth, Tenant, Role)
-Controller
-  ↓ SQL Query
-PostgreSQL
-  ↑ Result
-Controller
-  ↑ JSON Response
-Client
-```
-
----
-
-## 7. Database Architecture
-
-### 7.1 Schema Design Principles
-
-* Normalized relational schema
-* UUIDs as primary keys
-* ENUM types for controlled fields
-* Foreign keys for integrity
-* CASCADE deletes where applicable
-
----
-
-### 7.2 Core Tables
-
-* tenants
-* users
-* projects
-* tasks
-* audit_logs
-
-Each table follows strict ownership and relationship rules to ensure tenant safety.
-
----
-
-## 8. Subscription Enforcement Architecture
-
-Subscription limits are enforced at the application layer:
-
-1. Query tenant limits (`max_users`, `max_projects`)
-2. Count existing resources
-3. Reject creation if limit exceeded
-4. Return appropriate HTTP 403 response
-
-This ensures business rules are applied consistently.
-
----
-
-## 9. Audit Logging Architecture
-
-Audit logging is centralized:
-
-* Each critical action triggers an audit log entry
-* Stored fields:
-
-  * tenant_id
-  * user_id
-  * action
-  * entity_type
-  * entity_id
-  * timestamp
-* Logs are immutable and not exposed to modification APIs
-
----
-
-## 10. Error Handling Architecture
-
-* Centralized error responses
-* Consistent JSON error format
-* Meaningful HTTP status codes
-* Authorization and validation failures handled early
-
----
-
-## 11. Docker & Deployment Architecture
-
-### 11.1 Containerized Services
-
-| Service  | Responsibility       |
-| -------- | -------------------- |
-| database | PostgreSQL storage   |
-| backend  | API server           |
-| frontend | UI service (planned) |
-
----
-
-### 11.2 Inter-Service Communication
-
-* Services communicate via Docker service names
-* Backend connects to database using `database:5432`
-* Frontend consumes API via `backend:5000`
-
----
-
-### 11.3 Health Check Architecture
-
-* Backend exposes `/api/health`
-* Health check verifies:
-
-  * API availability
-  * Database connectivity
-* Docker Compose waits for healthy services before startup completion
-
----
-
-## 12. Scalability & Extensibility
-
-The architecture supports future growth:
-
-* Horizontal scaling of backend containers
-* Stateless API design
-* Read replicas for database (future)
-* Microservice extraction if required
-* Caching and background jobs can be added without refactoring
-
----
-
-## 13. Security Architecture Summary
-
-* JWT-based authentication
-* Strict tenant isolation
-* Role-based authorization
-* Secure password hashing
-* Audit trail for all critical operations
-
----
-
-## 14. Conclusion
-
-This architecture provides a **robust foundation for a production-ready multi-tenant SaaS system**. It balances simplicity and scalability while ensuring security, data isolation, and maintainability. The modular design allows future enhancements without architectural changes.
-
----
-

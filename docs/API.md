@@ -2,19 +2,33 @@
 
 **Multi-Tenant SaaS Platform – Project & Task Management**
 
-Base URL (Docker):
+---
+
+## Base URL
+
+**Docker / Local**
 
 ```
 http://localhost:5000/api
 ```
 
-Authentication:
+---
+
+## Authentication
+
+All protected endpoints require a JWT token.
+
+**Header**
 
 ```
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-All responses follow:
+---
+
+## Standard Response Format
+
+All API responses follow this structure:
 
 ```json
 {
@@ -30,12 +44,14 @@ All responses follow:
 
 ---
 
-### **API 1: Register Tenant**
+### API 1: Register Tenant
 
 **POST** `/auth/register-tenant`
-Auth: ❌ Public
+Authentication: ❌ Public
 
-**Request**
+Creates a new tenant and its first tenant administrator.
+
+#### Request Body
 
 ```json
 {
@@ -47,7 +63,7 @@ Auth: ❌ Public
 }
 ```
 
-**Response (201)**
+#### Success Response (201)
 
 ```json
 {
@@ -68,12 +84,14 @@ Auth: ❌ Public
 
 ---
 
-### **API 2: Login**
+### API 2: Login
 
 **POST** `/auth/login`
-Auth: ❌ Public
+Authentication: ❌ Public
 
-**Request**
+Authenticates a user within a tenant and returns a JWT token.
+
+#### Request Body
 
 ```json
 {
@@ -83,7 +101,7 @@ Auth: ❌ Public
 }
 ```
 
-**Response (200)**
+#### Success Response (200)
 
 ```json
 {
@@ -104,12 +122,14 @@ Auth: ❌ Public
 
 ---
 
-### **API 3: Get Current User**
+### API 3: Get Current User
 
 **GET** `/auth/me`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+Returns the authenticated user along with tenant details.
+
+#### Success Response (200)
 
 ```json
 {
@@ -134,12 +154,14 @@ Auth: ✅ Required
 
 ---
 
-### **API 4: Logout**
+### API 4: Logout
 
 **POST** `/auth/logout`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+For JWT-based auth, this invalidates the session client-side.
+
+#### Success Response (200)
 
 ```json
 {
@@ -154,13 +176,16 @@ Auth: ✅ Required
 
 ---
 
-### **API 5: Get Tenant Details**
+### API 5: Get Tenant Details
 
 **GET** `/tenants/:tenantId`
-Auth: ✅ Required
-Roles: tenant_admin (own tenant), super_admin
+Authentication: ✅ Required
+Authorization:
 
-**Response**
+* tenant_admin → own tenant only
+* super_admin → any tenant
+
+#### Success Response (200)
 
 ```json
 {
@@ -185,16 +210,17 @@ Roles: tenant_admin (own tenant), super_admin
 
 ---
 
-### **API 6: Update Tenant**
+### API 6: Update Tenant
 
 **PUT** `/tenants/:tenantId`
-Auth: ✅ Required
-Roles:
+Authentication: ✅ Required
 
-- tenant_admin → name only
-- super_admin → all fields
+Authorization rules:
 
-**Request**
+* tenant_admin → can update **name only**
+* super_admin → can update all fields
+
+#### Request Body
 
 ```json
 {
@@ -202,7 +228,7 @@ Roles:
 }
 ```
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -218,13 +244,13 @@ Roles:
 
 ---
 
-### **API 7: List All Tenants**
+### API 7: List All Tenants
 
 **GET** `/tenants`
-Auth: ✅ Required
-Roles: super_admin only
+Authentication: ✅ Required
+Authorization: super_admin only
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -258,13 +284,13 @@ Roles: super_admin only
 
 ---
 
-### **API 8: Add User**
+### API 8: Add User
 
 **POST** `/tenants/:tenantId/users`
-Auth: ✅ Required
-Roles: tenant_admin
+Authentication: ✅ Required
+Authorization: tenant_admin
 
-**Response (201)**
+#### Success Response (201)
 
 ```json
 {
@@ -284,12 +310,14 @@ Roles: tenant_admin
 
 ---
 
-### **API 9: List Users**
+### API 9: List Users
 
 **GET** `/tenants/:tenantId/users`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+Supports pagination and role filtering.
+
+#### Success Response (200)
 
 ```json
 {
@@ -317,12 +345,17 @@ Auth: ✅ Required
 
 ---
 
-### **API 10: Update User**
+### API 10: Update User
 
 **PUT** `/users/:userId`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+Authorization:
+
+* tenant_admin → update any user in tenant
+* user → update own profile (limited fields)
+
+#### Success Response (200)
 
 ```json
 {
@@ -339,12 +372,13 @@ Auth: ✅ Required
 
 ---
 
-### **API 11: Delete User**
+### API 11: Delete User
 
 **DELETE** `/users/:userId`
-Auth: ✅ Required
+Authentication: ✅ Required
+Authorization: tenant_admin
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -359,12 +393,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 12: Create Project**
+### API 12: Create Project
 
 **POST** `/projects`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (201)
 
 ```json
 {
@@ -383,12 +417,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 13: List Projects**
+### API 13: List Projects
 
 **GET** `/projects`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -421,12 +455,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 14: Update Project**
+### API 14: Update Project
 
 **PUT** `/projects/:projectId`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -444,12 +478,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 15: Delete Project**
+### API 15: Delete Project
 
 **DELETE** `/projects/:projectId`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -464,12 +498,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 16: Create Task**
+### API 16: Create Task
 
 **POST** `/projects/:projectId/tasks`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (201)
 
 ```json
 {
@@ -491,12 +525,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 17: List Tasks**
+### API 17: List Tasks
 
 **GET** `/projects/:projectId/tasks`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -530,12 +564,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 18: Update Task Status**
+### API 18: Update Task Status
 
 **PATCH** `/tasks/:taskId/status`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -550,12 +584,12 @@ Auth: ✅ Required
 
 ---
 
-### **API 19: Update Task**
+### API 19: Update Task
 
 **PUT** `/tasks/:taskId`
-Auth: ✅ Required
+Authentication: ✅ Required
 
-**Response**
+#### Success Response (200)
 
 ```json
 {
@@ -579,3 +613,5 @@ Auth: ✅ Required
 ```
 
 ---
+
+

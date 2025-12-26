@@ -32,7 +32,7 @@ SELECT
   uuid_generate_v4(),
   tenant.id,
   'admin@demo.com',
-  '<HASH_Demo@123>',
+  'Demo@123',
   'Demo Admin',
   'tenant_admin'
 FROM tenant;
@@ -44,7 +44,7 @@ INSERT INTO users (
   id, tenant_id, email, password_hash, full_name, role
 )
 SELECT uuid_generate_v4(), tenant.id, 'user1@demo.com',
-  '<HASH_User@123>', 'Demo User One', 'user'
+  'User@123', 'Demo User One', 'user'
 FROM tenant;
 
 WITH tenant AS (
@@ -54,7 +54,7 @@ INSERT INTO users (
   id, tenant_id, email, password_hash, full_name, role
 )
 SELECT uuid_generate_v4(), tenant.id, 'user2@demo.com',
-  '<HASH_User@123>', 'Demo User Two', 'user'
+  'User@123', 'Demo User Two', 'user'
 FROM tenant;
 
 WITH
