@@ -327,8 +327,8 @@ The frontend is being actively integrated and will include:
 
 ## Screenshots
 
-[view database-erd](images/database-erd.png)
-[view system-architecture](images/system-architecture.png)
+[view database-erd](docs/images/database-erd.png)
+[view system-architecture](docs/images/system-architecture.png)
 
 ---
 
