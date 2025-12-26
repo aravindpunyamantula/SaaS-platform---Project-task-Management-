@@ -71,50 +71,30 @@ const { signToken } = require('../utils/jwt');
 exports.login = async (req, res) => {
     const { email, password, tenantSubdomain } = req.body;
 
-    if (!email || !password || !tenantSubdomain) {
+    if (!email || !password) {
         return res.status(400).json({
             success: false,
-            message: 'Email, password, and tenantSubdomain are required',
+            message: "Email and password are required",
         });
     }
 
     try {
-        // Find tenant
-        const tenantResult = await pool.query(
-            'SELECT id, status FROM tenants WHERE subdomain = $1',
-            [tenantSubdomain]
-        );
-
-        if (tenantResult.rowCount === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Tenant not found',
-            });
-        }
-
-        const tenant = tenantResult.rows[0];
-
-        if (tenant.status !== 'active') {
-            return res.status(403).json({
-                success: false,
-                message: 'Tenant is not active',
-            });
-        }
-
-        // Find user
+        /* ============================
+           STEP 1: FIND USER BY EMAIL
+        ============================ */
         const userResult = await pool.query(
             `
-      SELECT id, email, password_hash, full_name, role, is_active
+      SELECT id, email, password_hash, full_name, role, is_active, tenant_id
       FROM users
-      WHERE email = $1 AND tenant_id = $2
+      WHERE email = $1
       `,
-            [email, tenant.id]
+            [email]
         );
 
         if (userResult.rowCount === 0) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid credentials',
+                message: "Invalid credentials",
             });
         }
 
@@ -123,7 +103,7 @@ exports.login = async (req, res) => {
         if (!user.is_active) {
             return res.status(403).json({
                 success: false,
-                message: 'Account is inactive',
+                message: "Account is inactive",
             });
         }
 
@@ -132,7 +112,77 @@ exports.login = async (req, res) => {
         if (!passwordMatch) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid credentials',
+                message: "Invalid credentials",
+            });
+        }
+
+        /* ============================
+           STEP 2: SUPER ADMIN LOGIN
+           (NO TENANT REQUIRED)
+        ============================ */
+        if (user.role === "super_admin") {
+            const token = signToken({
+                userId: user.id,
+                tenantId: null,
+                role: user.role,
+            });
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        fullName: user.full_name,
+                        role: user.role,
+                        tenantId: null,
+                    },
+                    token,
+                    expiresIn: 86400,
+                },
+            });
+        }
+
+        /* ============================
+           STEP 3: TENANT USER LOGIN
+           (tenantSubdomain REQUIRED)
+        ============================ */
+        if (!tenantSubdomain) {
+            return res.status(400).json({
+                success: false,
+                message: "tenantSubdomain is required for tenant users",
+            });
+        }
+
+        const tenantResult = await pool.query(
+            `
+      SELECT id, status
+      FROM tenants
+      WHERE subdomain = $1
+      `,
+            [tenantSubdomain]
+        );
+
+        if (tenantResult.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Tenant not found",
+            });
+        }
+
+        const tenant = tenantResult.rows[0];
+
+        if (tenant.status !== "active") {
+            return res.status(403).json({
+                success: false,
+                message: "Tenant is not active",
+            });
+        }
+
+        if (user.tenant_id !== tenant.id) {
+            return res.status(403).json({
+                success: false,
+                message: "User does not belong to this tenant",
             });
         }
 
@@ -160,7 +210,7 @@ exports.login = async (req, res) => {
         console.error(err);
         return res.status(500).json({
             success: false,
-            message: 'Login failed',
+            message: "Login failed",
         });
     }
 };
