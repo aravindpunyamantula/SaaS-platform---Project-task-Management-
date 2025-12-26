@@ -1,89 +1,154 @@
-# 🧩 Multi-Tenant SaaS Platform – Project & Task Management
 
-A **production-ready multi-tenant SaaS backend** that enables multiple organizations to independently manage users, projects, and tasks with **strict data isolation**, **role-based access control**, and **subscription limits**.
+# Multi-Tenant SaaS Platform – Project & Task Management System
 
-The system is designed with scalability, security, and maintainability in mind and follows industry-standard REST API practices.
+A **production-ready multi-tenant SaaS application** that allows multiple organizations to manage users, projects, and tasks securely within a shared infrastructure. The platform enforces **strict tenant isolation**, **role-based access control**, and **subscription limits**, following real-world SaaS design principles.
 
----
-
-## 🚀 Features
-
-- 🔐 JWT-based authentication (24-hour expiry)
-- 🏢 Multi-tenant architecture with strict tenant isolation
-- 👥 Role-based access control (Super Admin, Tenant Admin, User)
-- 📦 Subscription plans with enforced limits
-- 📁 Project management
-- ✅ Task management with assignment & status tracking
-- 🧾 Audit logging for critical actions
-- 🐳 Fully Dockerized backend & database
-- 🩺 Health check endpoint
-- 📑 Consistent API response structure
-- ⚙️ Automatic database migrations & seed data
+This project is designed with **scalability, security, and maintainability** as first-class concerns.
 
 ---
 
-## 🧱 Technology Stack
+## Overview
+
+This system enables:
+
+* Multiple tenants (organizations) on a single platform
+* Each tenant to manage its own users, projects, and tasks
+* Complete data isolation between tenants
+* Centralized control for a Super Admin
+* Subscription-based resource limits
+
+The backend is fully implemented and production-ready. The frontend is actively being integrated.
+
+---
+
+## Key Features
+
+### Authentication & Authorization
+
+* JWT-based authentication with 24-hour expiry
+* Role-based access control:
+
+  * `super_admin`
+  * `tenant_admin`
+  * `user`
+* Secure password hashing using bcrypt
+* Stateless authentication (no server-side sessions)
+
+### Multi-Tenancy
+
+* Shared database, shared schema architecture
+* Tenant isolation enforced using `tenant_id`
+* Tenant context derived only from JWT (never from client input)
+* Super Admin operates without tenant scope
+
+### User Management
+
+* Tenant Admin can create and manage users
+* Role assignment per user
+* Active/inactive user control
+
+### Project Management
+
+* Create, update, delete projects
+* Tenant-level project isolation
+* Subscription-based project limits enforced
+
+### Task Management
+
+* Create and manage tasks within projects
+* Assign tasks to users
+* Task status tracking (todo, in_progress, completed)
+* Priority and due-date support
+
+### Subscription Enforcement
+
+* Plans with configurable limits
+* Limits enforced before resource creation
+* Prevents abuse and ensures fairness
+
+### Audit Logging
+
+* Logs critical actions:
+
+  * User lifecycle events
+  * Project lifecycle events
+  * Task lifecycle events
+  * Tenant updates
+* Stored in a dedicated audit table
+
+### Infrastructure
+
+* Fully Dockerized backend and database
+* Health check endpoint
+* Automatic migrations and seed data
+
+---
+
+## Technology Stack
 
 ### Backend
 
-- **Node.js (18+)**
-- **Express.js**
-- **PostgreSQL 15**
-- **JWT** for authentication
-- **bcrypt** for password hashing
+* Node.js (18+)
+* Express.js
+* PostgreSQL 15
+* JWT for authentication
+* bcrypt for password hashing
 
 ### Frontend
 
-> 🚧 **Frontend will be added later**
-> Space reserved for React-based UI with protected routes and role-based rendering.
+* React 
+* Protected routes
+* Role-based UI rendering
+* Responsive layout
 
 ### DevOps
 
-- **Docker**
-- **Docker Compose**
+* Docker
+* Docker Compose
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture
 
 ### Multi-Tenant Model
 
-- Shared database with shared schema
-- Tenant isolation enforced using `tenant_id`
-- Super Admin users have `tenant_id = NULL`
-- Authorization and tenant filtering enforced at API level
+* Single PostgreSQL database
+* Shared schema
+* `tenant_id` column on all tenant-bound tables
+* Super Admin users have `tenant_id = NULL`
 
-### Key Principles
+### Security Principles
 
-- Never trust client-provided `tenant_id`
-- Always derive tenant context from JWT
-- All tenant-bound queries are filtered automatically
+* Never trust client-provided tenant identifiers
+* Always derive tenant context from JWT
+* Enforce tenant filtering at the API layer
+* Centralized authorization middleware
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 saas-platform/
 │
 ├── backend/
 │   ├── src/
-│   │   ├── controllers/     # API business logic
-│   │   ├── middleware/      # Auth, RBAC, tenant isolation
-│   │   ├── routes/          # API routes
-│   │   ├── utils/           # JWT, password helpers
-│   │   └── config/          # DB & app config
+│   │   ├── controllers/      
+│   │   ├── middleware/        
+│   │   ├── routes/           
+│   │   ├── utils/            
+│   │   └── config/            
 │   │
-│   ├── migrations/          # SQL migrations
-│   ├── seeds/               # Seed data
+│   ├── migrations/           
+│   ├── seeds/                 
 │   ├── Dockerfile
 │   └── server.js
 │
 ├── frontend/
-│   └── (to be implemented)
+│   └── (React application)
 │
 ├── docs/
-│   ├── API.md               # Full API documentation
+│   ├── API.md                 
 │   ├── architecture.md
 │   ├── research.md
 │   └── PRD.md
@@ -95,40 +160,42 @@ saas-platform/
 
 ---
 
-## 🐳 Docker Setup
+## Docker Setup
 
-### One-Command Startup
+### Start the Entire System
 
 ```bash
 docker-compose up -d
 ```
 
-This automatically:
+This will:
 
-- Starts PostgreSQL
-- Runs database migrations
-- Loads seed data
-- Starts backend API
-
----
-
-## 🔌 Service Ports
-
-| Service     | URL                     |
-| ----------- | ----------------------- |
-| Database    | `localhost:5432`        |
-| Backend API | `http://localhost:5000` |
-| Frontend    | _(to be added)_         |
+* Start PostgreSQL
+* Apply database migrations
+* Insert seed data
+* Start the backend API server
 
 ---
 
-## 🩺 Health Check
+## Service Endpoints
+
+| Service     | URL                                            |
+| ----------- | ---------------------------------------------- |
+| Backend API | [http://localhost:5000](http://localhost:5000) |
+| Database    | localhost:5432                                 |
+| Frontend    | [http://localhost:3000](http://localhost:3000)                                 |
+
+---
+
+## Health Check
+
+### Endpoint
 
 ```
 GET /api/health
 ```
 
-**Success Response**
+### Response
 
 ```json
 {
@@ -137,19 +204,17 @@ GET /api/health
 }
 ```
 
-This endpoint is used to verify:
+Used to verify:
 
-- API server is running
-- Database is connected
-- Migrations & seed data have completed
+* API availability
+* Database connectivity
+* Migration and seed success
 
 ---
 
-## 🔐 Authentication
+## Authentication
 
-- JWT-based authentication
-- Token expiry: **24 hours**
-- Required header:
+### Authorization Header
 
 ```
 Authorization: Bearer <JWT_TOKEN>
@@ -165,11 +230,13 @@ Authorization: Bearer <JWT_TOKEN>
 }
 ```
 
+Sensitive data is never stored in the token.
+
 ---
 
-## 🧪 Seed Data (Development / Testing)
+## Seed Data (Development)
 
-Seed data is automatically loaded at startup.
+Automatically loaded at startup.
 
 ### Super Admin
 
@@ -186,13 +253,14 @@ Subdomain: demo
 Plan: pro
 ```
 
-**Tenant Admin**
+### Tenant Admin
 
 ```
-admin@demo.com / Demo@123
+Email: admin@demo.com
+Password: Demo@123
 ```
 
-**Users**
+### Users
 
 ```
 user1@demo.com / User@123
@@ -201,27 +269,7 @@ user2@demo.com / User@123
 
 ---
 
-## 📑 API Documentation
-
-All APIs are fully documented in:
-
-```
-docs/API.md
-```
-
-Includes:
-
-- Authentication APIs
-- Tenant management
-- User management
-- Project management
-- Task management
-- Request & response examples
-- Error formats
-
----
-
-## 📦 Subscription Plans
+## Subscription Plans
 
 | Plan       | Max Users | Max Projects |
 | ---------- | --------- | ------------ |
@@ -229,45 +277,69 @@ Includes:
 | Pro        | 25        | 15           |
 | Enterprise | 100       | 50           |
 
-Limits are enforced **before resource creation**.
+Limits are enforced before creating users or projects.
 
 ---
 
-## 🧾 Audit Logging
+## API Documentation
 
-The system logs all important actions:
+Complete API documentation is available at:
 
-- User creation, update, deletion
-- Project creation, update, deletion
-- Task creation, update, deletion
-- Tenant updates
+```
+docs/API.md
+```
 
-Stored in the `audit_logs` table for traceability.
+Includes:
 
----
-
-## 🛡️ Security Highlights
-
-- Passwords hashed using bcrypt
-- JWT signature & expiry validation
-- Role-based authorization middleware
-- Tenant isolation enforced at query level
-- No sensitive data stored in JWT
-- Automatic rejection of cross-tenant access
+* Authentication endpoints
+* Tenant management
+* User management
+* Project management
+* Task management
+* Request and response examples
+* Error formats
 
 ---
 
-## 🚧 Frontend (Planned)
+## Security Highlights
 
-The frontend will include:
+* bcrypt password hashing
+* JWT signature and expiry validation
+* Role-based authorization middleware
+* Strict tenant isolation
+* Audit trail for sensitive actions
+* No cross-tenant data leakage
 
-- Registration & login pages
-- Dashboard
-- Projects & tasks UI
-- User management
-- Role-based navigation
-- Responsive design
+---
 
-_(Implementation will be added in a future phase.)_
+## Frontend Status
+
+The frontend is being actively integrated and will include:
+
+* Login and registration
+* Dashboard
+* Projects and tasks UI
+* User management
+* Role-based navigation
+* Responsive design
+
+---
+
+## Screenshots
+
+[view database-erd]()
+[view system-architecture]()
+
+---
+
+## Youtube vide link
+
+[click here](https://youtu.be/E_WFrt1hIAE)
+
+---
+
+## Conclusion
+
+This project demonstrates a **real-world, production-grade multi-tenant SaaS architecture** with a strong focus on security, scalability, and maintainability. The backend is fully operational and designed to support enterprise-level SaaS requirements, while the frontend integration completes the full-stack experience.
 
 ---
