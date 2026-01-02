@@ -9,6 +9,7 @@ import ProtectedLayout from "./layouts/ProtectedLayout";
 import ProjectDetails from "./pages/ProjectDetails";
 import MyTasks from "./pages/MyTasks";
 import Users from "./pages/Users";
+import Tenants from "./pages/Tenants";
 import "./styles/layout.css";
 
 export default function App() {
@@ -59,6 +60,18 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/tenants"
+            element={
+              <ProtectedRoute roles={["super_admin"]}>
+                <Tenants />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* <Route path="/tenants" element={<Tenants />} />
+          <Route path="*" element={<p>NO MATCH</p>} /> */}
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>

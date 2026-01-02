@@ -11,18 +11,20 @@ export const AuthProvider = ({ children }) => {
   const login = async (data) => {
     const res = await api.post("/auth/login", data);
     localStorage.setItem("token", res.data.data.token);
+    // Ensure we are setting the user object correctly
     setUser(res.data.data.user);
   };
 
-  // LOGOUT (API + CLIENT CLEANUP)
+  // LOGOUT
   const logout = async () => {
     try {
-      await api.post("/auth/logout"); // 🔑 API 4
-    } catch {
-      // Even if API fails, client must logout
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.error("Logout API failed", err);
     } finally {
       localStorage.removeItem("token");
       setUser(null);
+      // Use navigate or window.location - window is safer for full clear
       window.location.href = "/login";
     }
   };
@@ -30,9 +32,23 @@ export const AuthProvider = ({ children }) => {
   // VERIFY TOKEN ON LOAD
   const loadUser = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       const res = await api.get("/auth/me");
-      setUser(res.data.data);
-    } catch {
+      
+      // ⚠️ SAFETY CHECK: 
+      // Sometimes APIs return { data: { user: {...} } } vs { data: { ... } }
+      // We check if the response data has a nested 'user' property or is the user itself.
+      const userData = res.data.data.user ? res.data.data.user : res.data.data;
+      
+      console.log("Current User Role:", userData?.role); // Debugging
+      setUser(userData);
+    } catch (error) {
+      console.error("Load user failed:", error);
       localStorage.removeItem("token");
       setUser(null);
     } finally {
